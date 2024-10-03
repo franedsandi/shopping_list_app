@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shopping_list_app/data/categories.dart';
+import 'package:shopping_list_app/models/category.dart';
+import 'package:shopping_list_app/models/grocery_item.dart';
 
 class NewItem extends StatefulWidget {
   const NewItem({super.key});
@@ -11,6 +13,25 @@ class NewItem extends StatefulWidget {
 }
 
 class _NewItemState extends State<NewItem> {
+  final _formkey = GlobalKey<FormState>();
+  var _enteredName = '';
+  var _enteredQuantity = 1;
+  var _selectedCategory = categories[Categories.meat]!;
+
+  void _saveItem() {
+    if (_formkey.currentState!.validate()) {
+      _formkey.currentState!.save();
+      Navigator.of(context).pop(
+        GroceryItem(
+          id: DateTime.now().toString(),
+          name: _enteredName,
+          quantity: _enteredQuantity,
+          category: _selectedCategory,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -20,6 +41,7 @@ class _NewItemState extends State<NewItem> {
       body: Padding(
         padding: const EdgeInsets.all(12),
         child: Form(
+          key: _formkey,
           child: Column(
             children: [
               TextFormField(
@@ -28,7 +50,16 @@ class _NewItemState extends State<NewItem> {
                   label: Text('Name'),
                 ),
                 validator: (value) {
-                  return 'Error';
+                  if (value == null ||
+                      value.isEmpty ||
+                      value.trim().length <= 1 ||
+                      value.trim().length > 50) {
+                    return 'This must be between 2 and 50 characters';
+                  }
+                  return null;
+                },
+                onSaved: (value) {
+                  _enteredName = value!;
                 },
               ),
               Row(
@@ -36,15 +67,28 @@ class _NewItemState extends State<NewItem> {
                 children: [
                   Expanded(
                     child: TextFormField(
-                      decoration: const InputDecoration(
-                        label: Text('Quantity'),
-                      ),
-                      initialValue: '1',
-                    ),
+                        decoration: const InputDecoration(
+                          label: Text('Quantity'),
+                        ),
+                        keyboardType: TextInputType.number,
+                        initialValue: _enteredQuantity.toString(),
+                        validator: (value) {
+                          if (value == null ||
+                              value.isEmpty ||
+                              int.tryParse(value) == null ||
+                              int.tryParse(value)! <= 0) {
+                            return 'This must be a valid positive number';
+                          }
+                          return null;
+                        },
+                        onSaved: (value) {
+                          _enteredQuantity = int.parse(value!);
+                        }),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: DropdownButtonFormField(
+                      value: _selectedCategory,
                       items: [
                         for (final category in categories.entries)
                           DropdownMenuItem(
@@ -63,7 +107,9 @@ class _NewItemState extends State<NewItem> {
                           ),
                       ],
                       onChanged: (value) {
-                        // Aquí va la lógica de onChanged
+                        setState(() {
+                          _selectedCategory = value!;
+                        });
                       },
                     ),
                   ),
@@ -76,13 +122,15 @@ class _NewItemState extends State<NewItem> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
-                    onPressed: () {},
-                    child: Text('Reset'),
+                    onPressed: () {
+                      _formkey.currentState!.reset();
+                    },
+                    child: const Text('Reset'),
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
-                    onPressed: () {},
-                    child: Text('Add Item'),
+                    onPressed: _saveItem,
+                    child: const Text('Add Item'),
                   )
                 ],
               )
